@@ -1,82 +1,95 @@
-import { 
-  type CreateGenerusInput, 
-  type UpdateGenerusInput,
-  type Generus 
-} from '../schema';
+import { type Generus, type GenerusDataInput, type UpdateGenerus } from '../schema';
 
-export async function createGenerus(input: CreateGenerusInput): Promise<Generus> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to create a new Generus record with generated barcode.
-  // Should generate unique barcode for attendance system and save to database.
-  return Promise.resolve({
-    id: 1,
-    nama_lengkap: input.nama_lengkap,
-    tempat_lahir: input.tempat_lahir,
-    tanggal_lahir: input.tanggal_lahir || new Date(),
-    kelompok_sambung: input.kelompok_sambung,
-    jenis_kelamin: input.jenis_kelamin,
-    jenjang: input.jenjang,
-    status: input.status,
-    profesi: input.profesi,
-    keahlian: input.keahlian,
-    keterangan: input.keterangan,
-    foto_url: input.foto_url,
-    barcode: `GEN${Date.now()}`, // Placeholder barcode generation
-    created_at: new Date(),
-    updated_at: new Date()
-  });
+// Get all generus (for teacher/coordinator dashboards)
+export async function getAllGenerus(): Promise<Generus[]> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to fetch all generus data for display in teacher/coordinator dashboards.
+    return Promise.resolve([]);
 }
 
-export async function updateGenerus(input: UpdateGenerusInput): Promise<Generus> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to update existing Generus record.
-  // Should validate ID exists and update only provided fields.
-  return Promise.resolve({
-    id: input.id,
-    nama_lengkap: input.nama_lengkap || "Updated Name",
-    tempat_lahir: input.tempat_lahir || null,
-    tanggal_lahir: input.tanggal_lahir || new Date(),
-    kelompok_sambung: input.kelompok_sambung || 'Kelompok Situbondo Kota',
-    jenis_kelamin: input.jenis_kelamin || 'Laki-laki',
-    jenjang: input.jenjang || 'Remaja',
-    status: input.status || null,
-    profesi: input.profesi || null,
-    keahlian: input.keahlian || null,
-    keterangan: input.keterangan || null,
-    foto_url: input.foto_url || null,
-    barcode: `GEN${input.id}`,
-    created_at: new Date(),
-    updated_at: new Date()
-  });
+// Get generus by ID
+export async function getGenerusById(generusId: number): Promise<Generus | null> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to fetch a specific generus by their ID.
+    return Promise.resolve(null);
 }
 
-export async function getGenerusList(): Promise<Generus[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to fetch all Generus records from database.
-  // Should support filtering and pagination for large datasets.
-  return Promise.resolve([]);
-}
-
-export async function getGenerusById(id: number): Promise<Generus | null> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to fetch a specific Generus record by ID.
-  // Should return null if not found.
-  return Promise.resolve(null);
-}
-
-export async function deleteGenerus(id: number): Promise<{ success: boolean; message: string }> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to delete a Generus record by ID.
-  // Should validate ID exists and handle cascade deletions.
-  return Promise.resolve({
-    success: true,
-    message: "Generus berhasil dihapus"
-  });
-}
-
+// Get generus by barcode
 export async function getGenerusByBarcode(barcode: string): Promise<Generus | null> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is to find Generus by their unique barcode.
-  // Used for attendance scanning functionality.
-  return Promise.resolve(null);
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to find a generus by their barcode for online attendance.
+    return Promise.resolve(null);
+}
+
+// Create or update generus data (from generus dashboard input)
+export async function createOrUpdateGenerusData(input: GenerusDataInput): Promise<Generus> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to create new generus data or update existing data from the generus dashboard.
+    // It should generate a unique barcode for online attendance after data input.
+    const barcode = `GEN${Date.now()}`; // Placeholder barcode generation
+    
+    return Promise.resolve({
+        id: 1,
+        full_name: input.full_name,
+        place_of_birth: input.place_of_birth || null,
+        date_of_birth: input.date_of_birth || null,
+        sambung_group: input.sambung_group,
+        gender: input.gender || null,
+        level: input.level,
+        status: input.status || null,
+        profession: input.profession || null,
+        skill: input.skill || null,
+        notes: input.notes || null,
+        photo_url: input.photo_url || null,
+        barcode: barcode,
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
+    });
+}
+
+// Update generus data (for coordinator with edit capabilities)
+export async function updateGenerus(input: UpdateGenerus): Promise<Generus | null> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to update existing generus data with coordinator privileges.
+    return Promise.resolve(null);
+}
+
+// Delete generus (coordinator only)
+export async function deleteGenerus(generusId: number): Promise<{ success: boolean; message: string }> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to soft delete or permanently delete a generus record (coordinator only).
+    return Promise.resolve({
+        success: true,
+        message: 'Generus deleted successfully'
+    });
+}
+
+// Get generus by sambung group
+export async function getGenerusBySambungGroup(sambungGroup: string): Promise<Generus[]> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to fetch all generus belonging to a specific sambung group.
+    return Promise.resolve([]);
+}
+
+// Generate barcode for generus
+export async function generateGenerusBarcode(generusId: number): Promise<{ barcode: string }> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to generate a unique barcode for a generus for online attendance.
+    const barcode = `GEN${generusId}${Date.now()}`;
+    
+    return Promise.resolve({
+        barcode: barcode
+    });
+}
+
+// Bulk import generus data (from file upload)
+export async function bulkImportGenerus(fileData: any[]): Promise<{ success: boolean; imported: number; errors: string[] }> {
+    // This is a placeholder declaration! Real code should be implemented here.
+    // The goal of this handler is to process bulk import of generus data from PDF/DOC/XLSX files.
+    return Promise.resolve({
+        success: true,
+        imported: 0,
+        errors: []
+    });
 }

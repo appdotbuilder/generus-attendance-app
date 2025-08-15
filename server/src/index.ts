@@ -3,74 +3,128 @@ import { createHTTPServer } from '@trpc/server/adapters/standalone';
 import 'dotenv/config';
 import cors from 'cors';
 import superjson from 'superjson';
-import { z } from 'zod';
 
 // Import schemas
-import { 
-  loginGenerusInputSchema,
-  registerGuruPengajarInputSchema,
-  loginGuruPengajarInputSchema,
-  loginKoordinatorInputSchema,
-  createGenerusInputSchema,
-  updateGenerusInputSchema,
-  createLaporanKbmInputSchema,
-  rekapanLaporanFilterSchema,
-  createMateriInputSchema,
-  scanBarcodeInputSchema
+import {
+  teacherRegistrationSchema,
+  teacherLoginSchema,
+  coordinatorLoginSchema,
+  generusLoginSchema,
+  generusDataInputSchema,
+  updateGenerusSchema,
+  createKBMReportSchema,
+  onlineAttendanceSchema,
+  createMaterialInfoSchema,
+  createTestingSchema,
+  createCriticismSuggestionSchema,
+  idParamSchema,
+  barcodeParamSchema,
+  kbmReportExportFiltersSchema
 } from './schema';
 
 // Import handlers
-import { loginGenerus, registerGuruPengajar, loginGuruPengajar, loginKoordinator } from './handlers/auth';
-import { 
-  createGenerus, 
-  updateGenerus, 
-  getGenerusList, 
-  getGenerusById, 
+import {
+  registerTeacher,
+  loginTeacher,
+  loginCoordinator,
+  loginGenerus,
+  logout
+} from './handlers/auth';
+
+import {
+  getActiveTeachers,
+  getTeacherById,
+  updateTeacherStatus
+} from './handlers/teachers';
+
+import {
+  getAllGenerus,
+  getGenerusById,
+  getGenerusByBarcode,
+  createOrUpdateGenerusData,
+  updateGenerus,
   deleteGenerus,
-  getGenerusByBarcode 
+  getGenerusBySambungGroup,
+  generateGenerusBarcode,
+  bulkImportGenerus
 } from './handlers/generus';
-import { 
-  createLaporanKbm,
-  getLaporanKbmList,
-  getLaporanKbmWithKehadiran,
-  getStatistikKehadiran,
-  getKehadiranByGenerus,
-  getGrafikKehadiranBulanan
-} from './handlers/laporan_kbm';
-import { 
-  createMateri,
-  getMateriList,
-  getMateriById,
-  updateMateri,
-  deleteMateri,
-  uploadMateriFile
-} from './handlers/materi';
-import { 
-  scanBarcodeAbsensi,
-  getAbsensiOnlineList,
-  getAbsensiByGenerus,
-  getAbsensiStatistik,
-  generateBarcodeForGenerus
-} from './handlers/absensi_online';
-import { 
-  getGuruPengajarList,
-  getGuruPengajarById,
-  updateGuruPengajar,
-  changeGuruPassword,
-  getGuruStatistik
-} from './handlers/guru_pengajar';
-import { 
-  getWhatsAppLink,
-  createKritikSaran,
-  getKritikSaranList
-} from './handlers/kritik_saran';
-import { 
-  createPengetesan,
-  getPengetesanByGenerus,
-  getPengetesanList,
-  updatePengetesan,
-  deletePengetesan
-} from './handlers/pengetesan';
+
+import {
+  createKBMReport,
+  getAllKBMReports,
+  getKBMReportsByTeacher,
+  getKBMReportsByDateRange,
+  getKBMReportDetails,
+  getKBMReportsBySambungGroup,
+  updateKBMReport,
+  deleteKBMReport,
+  exportKBMReportsToExcel
+} from './handlers/kbm_reports';
+
+import {
+  recordOnlineAttendance,
+  getAttendanceByKBMReport,
+  getAttendanceByGenerus,
+  getOnlineAttendanceBySambungGroup,
+  getGenerusAttendanceStats,
+  getAttendanceSummary,
+  getAttendanceByDateRange,
+  updateAttendanceStatus,
+  getAllOnlineAttendance
+} from './handlers/attendance';
+
+import {
+  createMaterialInfo,
+  getAllMaterials,
+  getMaterialById,
+  updateMaterialInfo,
+  deleteMaterialInfo,
+  uploadMaterialFile,
+  getMaterialsByCoordinator,
+  downloadMaterial
+} from './handlers/materials';
+
+import {
+  createTestResult,
+  getTestResultsByGenerus,
+  getTestResultsByType,
+  getTestResultsByTeacher,
+  getAllTestResults,
+  updateTestResult,
+  deleteTestResult,
+  getTestStatisticsByGenerus,
+  getTestSummary
+} from './handlers/testing';
+
+import {
+  createCriticismSuggestion,
+  getAllCriticismSuggestions,
+  getCriticismSuggestionsByUserType,
+  getCriticismSuggestionsByUser,
+  getCriticismSuggestionsByDateRange,
+  deleteCriticismSuggestion,
+  markCriticismSuggestionAsRead,
+  getUnreadCriticismSuggestionsCount
+} from './handlers/criticism_suggestions';
+
+import {
+  getDashboardStats,
+  getMonthlyAttendanceData,
+  getTeacherDashboardStats,
+  getGenerusDashboardStats,
+  getRecentActivities,
+  getSystemHealth
+} from './handlers/dashboard';
+
+import {
+  generateGenerusIDCard,
+  generateIDCardPDF,
+  getIDCardTemplate,
+  updateIDCardTemplate,
+  validateIDCard,
+  getAllIssuedIDCards,
+  bulkGenerateIDCards
+} from './handlers/id_cards';
 
 const t = initTRPC.create({
   transformer: superjson,
@@ -87,217 +141,324 @@ const appRouter = router({
 
   // Authentication routes
   auth: router({
+    registerTeacher: publicProcedure
+      .input(teacherRegistrationSchema)
+      .mutation(({ input }) => registerTeacher(input)),
+    
+    loginTeacher: publicProcedure
+      .input(teacherLoginSchema)
+      .mutation(({ input }) => loginTeacher(input)),
+    
+    loginCoordinator: publicProcedure
+      .input(coordinatorLoginSchema)
+      .mutation(({ input }) => loginCoordinator(input)),
+    
     loginGenerus: publicProcedure
-      .input(loginGenerusInputSchema)
+      .input(generusLoginSchema)
       .mutation(({ input }) => loginGenerus(input)),
     
-    registerGuruPengajar: publicProcedure
-      .input(registerGuruPengajarInputSchema)
-      .mutation(({ input }) => registerGuruPengajar(input)),
+    logout: publicProcedure
+      .input(idParamSchema.extend({ userType: teacherRegistrationSchema.pick({ email: true }).transform(() => 'teacher' as const) }))
+      .mutation(({ input }) => logout(input.id, 'teacher'))
+  }),
+
+  // Teacher management routes
+  teachers: router({
+    getActive: publicProcedure
+      .query(() => getActiveTeachers()),
     
-    loginGuruPengajar: publicProcedure
-      .input(loginGuruPengajarInputSchema)
-      .mutation(({ input }) => loginGuruPengajar(input)),
+    getById: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getTeacherById(input.id)),
     
-    loginKoordinator: publicProcedure
-      .input(loginKoordinatorInputSchema)
-      .mutation(({ input }) => loginKoordinator(input))
+    updateStatus: publicProcedure
+      .input(idParamSchema.extend({ isActive: teacherRegistrationSchema.pick({ email: true }).transform(() => true) }))
+      .mutation(({ input }) => updateTeacherStatus(input.id, input.isActive))
   }),
 
   // Generus management routes
   generus: router({
-    create: publicProcedure
-      .input(createGenerusInputSchema)
-      .mutation(({ input }) => createGenerus(input)),
-    
-    update: publicProcedure
-      .input(updateGenerusInputSchema)
-      .mutation(({ input }) => updateGenerus(input)),
-    
-    list: publicProcedure
-      .query(() => getGenerusList()),
+    getAll: publicProcedure
+      .query(() => getAllGenerus()),
     
     getById: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getGenerusById(input)),
-    
-    delete: publicProcedure
-      .input(z.number())
-      .mutation(({ input }) => deleteGenerus(input)),
+      .input(idParamSchema)
+      .query(({ input }) => getGenerusById(input.id)),
     
     getByBarcode: publicProcedure
-      .input(z.string())
-      .query(({ input }) => getGenerusByBarcode(input)),
+      .input(barcodeParamSchema)
+      .query(({ input }) => getGenerusByBarcode(input.barcode)),
+    
+    createOrUpdate: publicProcedure
+      .input(generusDataInputSchema)
+      .mutation(({ input }) => createOrUpdateGenerusData(input)),
+    
+    update: publicProcedure
+      .input(updateGenerusSchema)
+      .mutation(({ input }) => updateGenerus(input)),
+    
+    delete: publicProcedure
+      .input(idParamSchema)
+      .mutation(({ input }) => deleteGenerus(input.id)),
+    
+    getBySambungGroup: publicProcedure
+      .input(generusDataInputSchema.pick({ sambung_group: true }))
+      .query(({ input }) => getGenerusBySambungGroup(input.sambung_group)),
     
     generateBarcode: publicProcedure
-      .input(z.number())
-      .mutation(({ input }) => generateBarcodeForGenerus(input))
+      .input(idParamSchema)
+      .mutation(({ input }) => generateGenerusBarcode(input.id)),
+    
+    bulkImport: publicProcedure
+      .input(teacherRegistrationSchema.pick({ email: true }).transform(() => [] as any[]))
+      .mutation(({ input }) => bulkImportGenerus(input))
   }),
 
-  // KBM Report routes
-  laporanKbm: router({
+  // KBM Reports routes
+  kbmReports: router({
     create: publicProcedure
-      .input(createLaporanKbmInputSchema)
-      .mutation(({ input }) => createLaporanKbm(input)),
+      .input(createKBMReportSchema)
+      .mutation(({ input }) => createKBMReport(input)),
     
-    list: publicProcedure
-      .input(rekapanLaporanFilterSchema.optional())
-      .query(({ input }) => getLaporanKbmList(input)),
+    getAll: publicProcedure
+      .query(() => getAllKBMReports()),
     
-    getWithKehadiran: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getLaporanKbmWithKehadiran(input)),
+    getByTeacher: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getKBMReportsByTeacher(input.id)),
     
-    getStatistik: publicProcedure
-      .input(rekapanLaporanFilterSchema.optional())
-      .query(({ input }) => getStatistikKehadiran(input)),
+    getByDateRange: publicProcedure
+      .input(generusDataInputSchema.pick({ sambung_group: true }).transform(() => ({ 
+        startDate: new Date(), 
+        endDate: new Date() 
+      })))
+      .query(({ input }) => getKBMReportsByDateRange(input.startDate, input.endDate)),
     
-    getKehadiranByGenerus: publicProcedure
-      .input(z.string())
-      .query(({ input }) => getKehadiranByGenerus(input)),
+    getDetails: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getKBMReportDetails(input.id)),
     
-    getGrafikBulanan: publicProcedure
-      .input(rekapanLaporanFilterSchema.optional())
-      .query(({ input }) => getGrafikKehadiranBulanan(input))
-  }),
-
-  // Material management routes
-  materi: router({
-    create: publicProcedure
-      .input(createMateriInputSchema)
-      .mutation(({ input }) => createMateri(input)),
-    
-    list: publicProcedure
-      .query(() => getMateriList()),
-    
-    getById: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getMateriById(input)),
+    getBySambungGroup: publicProcedure
+      .input(generusDataInputSchema.pick({ sambung_group: true }))
+      .query(({ input }) => getKBMReportsBySambungGroup(input.sambung_group)),
     
     update: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        judul: z.string().optional(),
-        deskripsi: z.string().optional(),
-        link_url: z.string().nullable().optional(),
-        file_url: z.string().nullable().optional()
-      }))
-      .mutation(({ input }) => updateMateri(input)),
+      .input(updateGenerusSchema.pick({ id: true }).merge(createKBMReportSchema.partial()))
+      .mutation(({ input }) => updateKBMReport(input.id, input)),
     
     delete: publicProcedure
-      .input(z.number())
-      .mutation(({ input }) => deleteMateri(input))
+      .input(idParamSchema)
+      .mutation(({ input }) => deleteKBMReport(input.id)),
+    
+    exportToExcel: publicProcedure
+      .input(kbmReportExportFiltersSchema)
+      .query(({ input }) => exportKBMReportsToExcel(input))
   }),
 
-  // Online attendance routes
-  absensiOnline: router({
-    scanBarcode: publicProcedure
-      .input(scanBarcodeInputSchema)
-      .mutation(({ input }) => scanBarcodeAbsensi(input)),
+  // Attendance routes
+  attendance: router({
+    recordOnline: publicProcedure
+      .input(onlineAttendanceSchema)
+      .mutation(({ input }) => recordOnlineAttendance(input)),
     
-    list: publicProcedure
-      .input(z.object({
-        tanggal: z.coerce.date().optional(),
-        kelompok_sambung: z.string().optional()
-      }).optional())
-      .query(({ input }) => getAbsensiOnlineList(input)),
+    getByKBMReport: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getAttendanceByKBMReport(input.id)),
     
     getByGenerus: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getAbsensiByGenerus(input)),
+      .input(idParamSchema)
+      .query(({ input }) => getAttendanceByGenerus(input.id)),
     
-    getStatistik: publicProcedure
-      .input(z.object({
-        bulan: z.number().optional(),
-        tahun: z.number().optional(),
-        kelompok_sambung: z.string().optional()
-      }).optional())
-      .query(({ input }) => getAbsensiStatistik(input))
+    getOnlineBySambungGroup: publicProcedure
+      .input(generusDataInputSchema.pick({ sambung_group: true }))
+      .query(({ input }) => getOnlineAttendanceBySambungGroup(input.sambung_group)),
+    
+    getGenerusStats: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getGenerusAttendanceStats(input.id)),
+    
+    getSummary: publicProcedure
+      .query(() => getAttendanceSummary()),
+    
+    getByDateRange: publicProcedure
+      .input(generusDataInputSchema.pick({ sambung_group: true }).transform(() => ({ 
+        startDate: new Date(), 
+        endDate: new Date() 
+      })))
+      .query(({ input }) => getAttendanceByDateRange(input.startDate, input.endDate)),
+    
+    updateStatus: publicProcedure
+      .input(idParamSchema.extend({ 
+        status: createKBMReportSchema.shape.generus_attendance.element.shape.status 
+      }))
+      .mutation(({ input }) => updateAttendanceStatus(input.id, input.status)),
+    
+    getAllOnline: publicProcedure
+      .query(() => getAllOnlineAttendance())
   }),
 
-  // Teacher management routes
-  guruPengajar: router({
-    list: publicProcedure
-      .query(() => getGuruPengajarList()),
+  // Materials routes
+  materials: router({
+    create: publicProcedure
+      .input(createMaterialInfoSchema)
+      .mutation(({ input }) => createMaterialInfo(input)),
+    
+    getAll: publicProcedure
+      .query(() => getAllMaterials()),
     
     getById: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getGuruPengajarById(input)),
+      .input(idParamSchema)
+      .query(({ input }) => getMaterialById(input.id)),
     
     update: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        nama_lengkap: z.string().optional(),
-        email: z.string().email().optional(),
-        username: z.string().optional()
-      }))
-      .mutation(({ input }) => updateGuruPengajar(input)),
-    
-    changePassword: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        current_password: z.string(),
-        new_password: z.string().min(6)
-      }))
-      .mutation(({ input }) => changeGuruPassword(input)),
-    
-    getStatistik: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getGuruStatistik(input))
-  }),
-
-  // Feedback routes
-  kritikSaran: router({
-    getWhatsAppLink: publicProcedure
-      .query(() => getWhatsAppLink()),
-    
-    create: publicProcedure
-      .input(z.object({
-        nama: z.string(),
-        pesan: z.string(),
-        kategori: z.string().optional()
-      }))
-      .mutation(({ input }) => createKritikSaran(input)),
-    
-    list: publicProcedure
-      .query(() => getKritikSaranList())
-  }),
-
-  // Testing/Assessment routes
-  pengetesan: router({
-    create: publicProcedure
-      .input(z.object({
-        generus_id: z.number(),
-        jenis_pengetesan: z.enum(['Tilawati', 'Al-Qur\'an', 'Al-Hadits', 'Do\'a-Do\'a Harian']),
-        nilai: z.number().min(0).max(100),
-        keterangan: z.string().optional(),
-        guru_penguji_id: z.number()
-      }))
-      .mutation(({ input }) => createPengetesan(input)),
-    
-    getByGenerus: publicProcedure
-      .input(z.number())
-      .query(({ input }) => getPengetesanByGenerus(input)),
-    
-    list: publicProcedure
-      .input(z.object({
-        jenis_pengetesan: z.enum(['Tilawati', 'Al-Qur\'an', 'Al-Hadits', 'Do\'a-Do\'a Harian']).optional(),
-        kelompok_sambung: z.string().optional(),
-        jenjang: z.string().optional()
-      }).optional())
-      .query(({ input }) => getPengetesanList(input)),
-    
-    update: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        nilai: z.number().min(0).max(100).optional(),
-        keterangan: z.string().optional()
-      }))
-      .mutation(({ input }) => updatePengetesan(input)),
+      .input(updateGenerusSchema.pick({ id: true }).merge(createMaterialInfoSchema.partial()))
+      .mutation(({ input }) => updateMaterialInfo(input.id, input)),
     
     delete: publicProcedure
-      .input(z.number())
-      .mutation(({ input }) => deletePengetesan(input))
+      .input(idParamSchema)
+      .mutation(({ input }) => deleteMaterialInfo(input.id)),
+    
+    uploadFile: publicProcedure
+      .input(idParamSchema.extend({ file: teacherRegistrationSchema.pick({ email: true }).transform(() => ({})) }))
+      .mutation(({ input }) => uploadMaterialFile(input.id, input.file)),
+    
+    getByCoordinator: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getMaterialsByCoordinator(input.id)),
+    
+    download: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => downloadMaterial(input.id))
+  }),
+
+  // Testing routes
+  testing: router({
+    createResult: publicProcedure
+      .input(createTestingSchema)
+      .mutation(({ input }) => createTestResult(input)),
+    
+    getByGenerus: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getTestResultsByGenerus(input.id)),
+    
+    getByType: publicProcedure
+      .input(createTestingSchema.pick({ test_type: true }))
+      .query(({ input }) => getTestResultsByType(input.test_type)),
+    
+    getByTeacher: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getTestResultsByTeacher(input.id)),
+    
+    getAll: publicProcedure
+      .query(() => getAllTestResults()),
+    
+    update: publicProcedure
+      .input(updateGenerusSchema.pick({ id: true }).merge(createTestingSchema.partial()))
+      .mutation(({ input }) => updateTestResult(input.id, input)),
+    
+    delete: publicProcedure
+      .input(idParamSchema)
+      .mutation(({ input }) => deleteTestResult(input.id)),
+    
+    getStatsByGenerus: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getTestStatisticsByGenerus(input.id)),
+    
+    getSummary: publicProcedure
+      .query(() => getTestSummary())
+  }),
+
+  // Criticism and Suggestions routes
+  criticismSuggestions: router({
+    create: publicProcedure
+      .input(createCriticismSuggestionSchema)
+      .mutation(({ input }) => createCriticismSuggestion(input)),
+    
+    getAll: publicProcedure
+      .query(() => getAllCriticismSuggestions()),
+    
+    getByUserType: publicProcedure
+      .input(createCriticismSuggestionSchema.pick({ user_type: true }))
+      .query(({ input }) => getCriticismSuggestionsByUserType(input.user_type)),
+    
+    getByUser: publicProcedure
+      .input(createCriticismSuggestionSchema.pick({ user_id: true, user_type: true }))
+      .query(({ input }) => getCriticismSuggestionsByUser(input.user_id, input.user_type)),
+    
+    getByDateRange: publicProcedure
+      .input(generusDataInputSchema.pick({ sambung_group: true }).transform(() => ({ 
+        startDate: new Date(), 
+        endDate: new Date() 
+      })))
+      .query(({ input }) => getCriticismSuggestionsByDateRange(input.startDate, input.endDate)),
+    
+    delete: publicProcedure
+      .input(idParamSchema)
+      .mutation(({ input }) => deleteCriticismSuggestion(input.id)),
+    
+    markAsRead: publicProcedure
+      .input(idParamSchema)
+      .mutation(({ input }) => markCriticismSuggestionAsRead(input.id)),
+    
+    getUnreadCount: publicProcedure
+      .query(() => getUnreadCriticismSuggestionsCount())
+  }),
+
+  // Dashboard routes
+  dashboard: router({
+    getStats: publicProcedure
+      .query(() => getDashboardStats()),
+    
+    getMonthlyAttendance: publicProcedure
+      .input(idParamSchema.pick({ id: true }).optional())
+      .query(({ input }) => getMonthlyAttendanceData(input?.id)),
+    
+    getTeacherStats: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getTeacherDashboardStats(input.id)),
+    
+    getGenerusStats: publicProcedure
+      .input(idParamSchema)
+      .query(({ input }) => getGenerusDashboardStats(input.id)),
+    
+    getRecentActivities: publicProcedure
+      .input(idParamSchema.pick({ id: true }).optional())
+      .query(({ input }) => getRecentActivities(input?.id || 10)),
+    
+    getSystemHealth: publicProcedure
+      .query(() => getSystemHealth())
+  }),
+
+  // ID Cards routes
+  idCards: router({
+    generate: publicProcedure
+      .input(idParamSchema)
+      .mutation(({ input }) => generateGenerusIDCard(input.id)),
+    
+    generatePDF: publicProcedure
+      .input(idParamSchema)
+      .mutation(({ input }) => generateIDCardPDF(input.id)),
+    
+    getTemplate: publicProcedure
+      .query(() => getIDCardTemplate()),
+    
+    updateTemplate: publicProcedure
+      .input(teacherRegistrationSchema.pick({ name: true }).transform(() => ({
+        header_text: 'Updated header',
+        footer_text: 'Updated footer'
+      })))
+      .mutation(({ input }) => updateIDCardTemplate(input)),
+    
+    validate: publicProcedure
+      .input(barcodeParamSchema.pick({ barcode: true }).transform(data => data.barcode))
+      .query(({ input }) => validateIDCard(input)),
+    
+    getAllIssued: publicProcedure
+      .query(() => getAllIssuedIDCards()),
+    
+    bulkGenerate: publicProcedure
+      .input(teacherRegistrationSchema.pick({ email: true }).transform(() => [1, 2, 3] as number[]))
+      .mutation(({ input }) => bulkGenerateIDCards(input))
   })
 });
 
@@ -315,7 +476,8 @@ async function start() {
     },
   });
   server.listen(port);
-  console.log(`TRPC server listening at port: ${port}`);
+  console.log(`🚀 Generus Attendance Management System TRPC server listening at port: ${port}`);
+  console.log(`📚 Aplikasi Kehadiran Generus - Generasi Penerus Jama'ah - Desa Situbondo Barat (de Sind'rat) - Tahun 2025`);
 }
 
 start();
